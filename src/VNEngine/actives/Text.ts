@@ -13,9 +13,16 @@ class Text extends Active {
   public get textWidth(): number {
     return this._cachedTextWidth;
   }
-  private calculateTextWidth(ctx: CanvasRenderingContext2D) {
-    this._cachedTextWidth = ctx.measureText(this.text).width;
-    return this._cachedTextWidth;
+
+  private _cachedTextHeight: number = 0;
+  public get textHeight(): number {
+    return this._cachedTextHeight;
+  }
+  private calculateText(ctx: CanvasRenderingContext2D) {
+    const metrics = ctx.measureText(this.text);
+    this._cachedTextWidth = metrics.width;
+    this._cachedTextHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+    return metrics;
   }
 
   constructor(options?: Text.Options) {
@@ -29,12 +36,12 @@ class Text extends Active {
     this.textBaseline = options.textBaseline ?? "alphabetic";
   }
 
-  public get originXResult(): number {
+  public get originXRelative(): number {
     if (this._cachedOriginXOriginal !== this.originX) {
       this._cachedOriginXOriginal = this.originX;
-      this._cachedOriginXResult = this.originX instanceof VNEngine.Percent ? this.originX.of(this.textWidth ?? this.width) : this.originX;
+      this._cachedOriginXRelative = this.originX instanceof VNEngine.Percent ? this.originX.of(this.textWidth ?? this.width) : this.originX;
     }
-    return this._cachedOriginXResult;
+    return this._cachedOriginXRelative;
   }
 
   // public get originYResult(): number {
@@ -52,14 +59,14 @@ class Text extends Active {
     ctx.font = `${this.fontSize}px ${this.fontFamily}`;
     ctx.textAlign = this.textAlign;
     ctx.textBaseline = this.textBaseline;
-    this.calculateTextWidth(ctx);
+    this.calculateText(ctx);
     if (this.style === "fill") {
       ctx.fillStyle = this.color;
-      ctx.fillText(this.text, this.absoluteX - this.originXResult, this.absoluteY - this.originYResult);
+      ctx.fillText(this.text, this.absoluteX - this.originXRelative, this.absoluteY - this.originYRelative);
     }
     else if (this.style === "stroke") {
       ctx.strokeStyle = this.color;
-      ctx.strokeText(this.text, this.absoluteX - this.originXResult, this.absoluteY - this.originYResult);
+      ctx.strokeText(this.text, this.absoluteX - this.originXRelative, this.absoluteY - this.originYRelative);
     }
     else {
       throw new Error(`Unknown style: ${this.style}`);

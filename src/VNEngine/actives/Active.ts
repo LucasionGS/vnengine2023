@@ -70,28 +70,28 @@ class Active {
     this.layer = options.layer ?? 0;
     this.width = options.width ?? 0;
     this.height = options.height ?? 0;
-    this.color = options.color ?? "white";
+    this.color = options.color ?? "black";
   }
 
   // Cache values
   protected _cachedOriginXOriginal!: VNEngine.AxisPositionValue;
-  protected _cachedOriginXResult!: number;
-  public get originXResult(): number {
+  protected _cachedOriginXRelative!: number;
+  public get originXRelative(): number {
     if (this._cachedOriginXOriginal !== this.originX) {
       this._cachedOriginXOriginal = this.originX;
-      this._cachedOriginXResult = this.originX instanceof VNEngine.Percent ? this.originX.of(this.width) : this.originX;
+      this._cachedOriginXRelative = this.originX instanceof VNEngine.Percent ? this.originX.of(this.width) : this.originX;
     }
-    return this._cachedOriginXResult;
+    return this._cachedOriginXRelative;
   }
 
   protected _cachedOriginYOriginal!: VNEngine.AxisPositionValue;
-  protected _cachedOriginYResult!: number;
-  public get originYResult(): number {
+  protected _cachedOriginYRelative!: number;
+  public get originYRelative(): number {
     if (this._cachedOriginYOriginal !== this.originY) {
       this._cachedOriginYOriginal = this.originY;
-      this._cachedOriginYResult = this.originY instanceof VNEngine.Percent ? this.originY.of(this.height) : this.originY;
+      this._cachedOriginYRelative = this.originY instanceof VNEngine.Percent ? this.originY.of(this.height) : this.originY;
     }
-    return this._cachedOriginYResult;
+    return this._cachedOriginYRelative;
   }
 
 
@@ -121,7 +121,7 @@ class Active {
     this.absoluteY = this.y + (this.parent?.absoluteY ?? 0);
     ctx.save();
     ctx.fillStyle = this.color;
-    ctx.fillRect(this.absoluteX - this.originXResult, this.absoluteY - this.originYResult, this.width, this.height);
+    ctx.fillRect(this.absoluteX - this.originXRelative, this.absoluteY - this.originYRelative, this.width, this.height);
     ctx.restore();
   }
 

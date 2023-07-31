@@ -26,25 +26,26 @@ mainScene.setEvent("beforeTransition", () => {
     originX: 0,
     originY: 0,
     layer: 0,
+    color: "#fff",
   }).addScene(mainScene);
 
   const ionchan = new Character({
     id: "Ionchan",
     x: game.canvas.width / 2,
-    y: game.canvas.height / 2,
+    y: game.canvas.height,
     ratio: VNEngine.percent(16),
     originX: VNEngine.percent(50),
-    originY: VNEngine.percent(50),
-    layer: 1,
+    originY: VNEngine.percent(100),
+    layer: 0,
     imageSrc: Cheer,
   }).addScene(mainScene);
 
   const title = new Text({
     id: "Title",
     text: "Hello World!",
-    x: game.canvas.width / 2,
+    x: 0,
     y: 64,
-    fontSize: 64,
+    fontSize: 48,
     textAlign: "center",
     textBaseline: "middle",
     layer: 0,
@@ -52,31 +53,20 @@ mainScene.setEvent("beforeTransition", () => {
     style: "fill",
   }).addScene(mainScene);
 
-  // text.setParent(character);
+  title.setParent(ionchan);
 
-  // Make character go in a circle
-  let angle = 0;
-  const speed = 0.0005;
-  ionchan.update = ((delta) => {
-    angle += speed * delta;
-    const cRadius = ionchan.realHeight / 4;
-    ionchan.x = Math.cos(angle) * cRadius + game.canvas.width / 2;
-    ionchan.y = Math.sin(angle) * cRadius + game.canvas.height * 0.75;
-    
-  });
-  
-  let color = { r: 0, g: 0, b: 0};
-  title.update = (() => {
-    const colorS = `rgb(${
-      ((color.r = color.r + 1) % 256).toString().padStart(3, "0")
-    }, ${
-      ((color.g = color.g + 2) % 256).toString().padStart(3, "0")
-    }, ${
-      ((color.b = color.b + 3) % 256).toString().padStart(3, "0")
-    })`;
-    // background.color = colorS;
-    title.color = colorS;
-    title.text = `Ionchan ${colorS}`;
+  const handler = () => {
+    title.y = -ionchan.realHeight;
+    ionchan.image.removeEventListener("load", handler);
+  };
+  ionchan.image.addEventListener("load", handler);
+
+  let titleAngle = 0;
+  const titleSpeed = 0.002;
+  title.update = ((delta) => {
+    titleAngle += titleSpeed * delta;
+    const titleRadius = 4;
+    title.y = Math.sin(titleAngle) * titleRadius - ionchan.realHeight - title.textHeight;
   });
 });
 
