@@ -7,7 +7,9 @@ import Transition from "../transitions/Transition";
  * Scenes are used to separate different parts of the game.
  */
 class Scene {
-  public game: VNEngine;
+  public get game() {
+    return VNEngine.game;
+  }
 
   public beforeTransition?: Scene.EventFunction;
   public afterTransition?: Scene.EventFunction;
@@ -15,6 +17,8 @@ class Scene {
   public setEvent(event: "beforeTransition" | "afterTransition", fn: Scene.EventFunction): void {
     this[event] = fn;
   }
+
+  public startedAt: number = 0;
 
   private _activeElements: Active[] = [];
   public get activeElements(): Active[] {
@@ -30,12 +34,12 @@ class Scene {
     this._activeElements.sort((a, b) => a.layer - b.layer);
   }
 
-  constructor(game: VNEngine) {
-    this.game = game;
+  constructor() {
   }
 
   public async start(): Promise<void> {
     // Implement Start Transition.
+    this.startedAt = window.performance.now();
     await this.beforeTransition?.();
     await this.onEnter();
     await this.afterTransition?.();
@@ -55,6 +59,7 @@ class Scene {
    */
   public async onExit(): Promise<void> {
     // Implement Exit Transition.
+    this.activeElements.forEach(active => active.unload());
   }
 
   public update(delta: number, time: number): void {
