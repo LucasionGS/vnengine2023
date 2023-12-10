@@ -1,4 +1,5 @@
 import VNEngine from "../VNEngine";
+import Scene from "../scenes/Scene";
 import Sprite from "./Sprite";
 import Textbox from "./Textbox";
 
@@ -15,10 +16,20 @@ class Character extends Sprite {
    * Display text in the textbox and start writing it out. Automatically sets the title to the name of the character.
    * @param text Text or template to generate text from.
    */
-  public say(text: Textbox.Text | Textbox.Text[]) {
+  public sayImmediate(text: Textbox.Text | Textbox.Text[]) {
     const tb = VNEngine.game.getTextbox();
     if (!tb) throw new Error("No textbox found.");
-    tb.display(text, { text: this.name, color: "#0056a2", bold: true, fontSize: 32 });
+    tb.displayImmediate(text, { text: this.name, color: this.color || "#0056a2", bold: true, fontSize: 32 });
+  }
+
+  /**
+   * Display text in the textbox and start writing it out. Automatically sets the title to the name of the character.
+   * @param text Text or template to generate text from.
+   */
+  public continueDialog(text: Textbox.Text | Textbox.Text[]) {
+    const tb = VNEngine.game.getTextbox();
+    if (!tb) throw new Error("No textbox found.");
+    tb.continueDialog(text);
   }
 
   /**
@@ -27,8 +38,8 @@ class Character extends Sprite {
    * @param otherAction A function that is executed right before the text is displayed.
    * @returns 
    */
-  public sayOut(text: Textbox.Text | Textbox.Text[], otherAction?: () => void) {
-    return () => { otherAction?.(); this.say(text); };
+  public say(text: Textbox.Text | Textbox.Text[], otherAction?: (event: Scene.DialogEvent) => void) {
+    return (event: Scene.DialogEvent) => { otherAction?.(event); this.sayImmediate(text); };
   }
 }
 

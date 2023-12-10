@@ -1,4 +1,5 @@
 import VNEngine from "../VNEngine";
+import Animation from "../animations/Animation";
 import Scene from "../scenes/Scene";
 
 /**
@@ -167,39 +168,87 @@ class Active {
     return this;
   }
 
+  private animation?: Animation<this>;
+  public animationRunning = false;
+  public animationStartTime = 0;
+
+  public updateAnimationIfRunning(active: this, delta: number, time: number, animationTime: number): void {
+    if (this.animationRunning) {
+      this.animation?.update(active, delta, time, animationTime);
+    }
+  }
+
+  /**
+   * Add an animation to the active element. Animations do not start automatically and must be started with `startAnimation()`.
+   * @param animation The animation to add.
+   */
+  public setAnimation(animation: Animation<this>): this {
+    if (this.animation && this.animationRunning) this.stopAnimation();
+    this.animation = animation;
+    return this;
+  }
+
+  /**
+   * Start the active element's animation.
+   */
+  public startAnimation(): this {
+    if (this.animationRunning) this.stopAnimation();
+    this.animation?.onStart(this);
+    this.animationRunning = true;
+    this.animationStartTime = window.performance.now();
+    return this;
+  }
+
+  /**
+   * Stop the active element's animation.
+   */
+  public stopAnimation(): this {
+    this.animationRunning = false;
+    this.animation?.onStop(this);
+    return this;
+  }
+  
   private newX!: number;
   private newY!: number;
-  private moveDelay!: number;
-  private _moving = false;
 
   /**
    * Move the active element to the specified position smoothly.
+   * 
+   * Avoid running this method multiple times at once, as it can cause unexpected behavior.
    * @param position The position to move to. Only the values that are defined will be moved. If both are defined, it will move diagonally.
    * @param delay The delay in milliseconds between each movement. Default is 25. The higher the number, the slower the movement. `1` is instant.
    * @returns 
    */
-  public moveTo(position: { x?: number, y?: number, delay?: number }): this {
-    const { x: newX, y: newY, delay = 25 } = position;
+  public async moveTo(position: { x?: number, y?: number, delay?: number, after?: number }): Promise<this> {
+    const { x: newX, y: newY, delay = 25, after = 0 } = position;
+    let resolve: (active: this) => void;
+    const p = new Promise<this>(r => resolve = r);
     if (delay < 1) {
       throw new Error("Delay must be 1 or greater.");
     }
+
+    if (after > 0) {
+      await VNEngine.delay(after);
+    }
+    
     if (typeof newX === "number") this.newX = newX;
     if (typeof newY === "number") this.newY = newY;
-    this.moveDelay = delay;
+    let moveDelay = delay;
+    let _moving = false;
     const move = () => {
-      this._moving = true;
+      _moving = true;
       const hasX = typeof this.newX === "number";
       const hasY = typeof this.newY === "number";
       
       if (hasX && this.x != this.newX) {
         if (Math.abs(this.newX - this.x) > 2)
-          this.x += (this.newX - this.x) / this.moveDelay;
+          this.x += (this.newX - this.x) / moveDelay;
         else
           this.x = this.newX;
       }
       if (hasY && this.y != this.newY) {
         if (Math.abs(this.newY - this.y) > 2)
-          this.y += (this.newY - this.y) / this.moveDelay;
+          this.y += (this.newY - this.y) / moveDelay;
         else
           this.y = this.newY;
       }
@@ -209,11 +258,12 @@ class Active {
         }, 10);
       }
       else {
-        this._moving = false;
+        _moving = false;
+        resolve(this);
       }
     }
-    if (!this._moving) move();
-    return this;
+    if (!_moving) move();
+    return p;
   }
 }
 

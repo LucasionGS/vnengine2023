@@ -1,4 +1,5 @@
 import VNEngine from "../VNEngine";
+import Scene from "../scenes/Scene";
 import Sprite from "./Sprite";
 
 class Textbox {
@@ -12,10 +13,11 @@ class Textbox {
    * @param title Title of the textbox. Usually the name of the character speaking.
    * @param defaultOptions Default options for all text in `text`.
    */
-  public display(text: Textbox.Text | Textbox.Text[], title?: Textbox.Text, defaultOptions?: Omit<Textbox.TextTemplate, "text">) {
+  public displayImmediate(text: Textbox.Text | Textbox.Text[], title?: Textbox.Text, defaultOptions?: Omit<Textbox.TextTemplate, "text">) {
     if (typeof title === "function") title = title();
     this.title = title ? (typeof title === "string" ? { ...defaultOptions, text: title } : { ...defaultOptions, ...title }) : null;
     defaultOptions ??= {};
+    this._lastDefaultOptions = defaultOptions;
     this.characterCount = 0;
     if (!Array.isArray(text)) text = [text];
     const textTexmples = text.map((t) => {
@@ -31,8 +33,19 @@ class Textbox {
       return dataObjects;
     }).flat();
     this._text = textTexmples;
+    this._textObject = text;
     this.characterCountMax = textTexmples.reduce((a, b) => a + b.text.length, 0);
     this.characterCountStarted = false;
+  }
+
+  public continueDialog(text: Textbox.Text | Textbox.Text[]) {
+    const data = this.getCurrentTextData();
+    text = Array.isArray(text) ? text : [text];
+    this.displayImmediate([...data.text, ...text], this.title || undefined, this._lastDefaultOptions);
+    this.characterCount = data.length;
+    if (!this.characterCountStarted && this.characterCount === data.length) {
+      this.incrementCharacterCount();
+    }
   }
 
   /**
@@ -43,8 +56,8 @@ class Textbox {
    * @param otherAction A function that is executed right before the text is displayed.
    * @returns 
    */
-  public displayOut(text: Textbox.Text | Textbox.Text[], title?: Textbox.Text, defaultOptions?: Omit<Textbox.TextTemplate, "text">, otherAction?: () => void) {
-    return () => { otherAction?.(); this.display(text, title, defaultOptions); }
+  public display(text: Textbox.Text | Textbox.Text[], title?: Textbox.Text, defaultOptions?: Omit<Textbox.TextTemplate, "text">, otherAction?: (event: Scene.DialogEvent) => void): Scene.DialogFunction {
+    return (event) => { otherAction?.(event); this.displayImmediate(text, title, defaultOptions); }
   }
 
   public incrementCharacterCount() {
@@ -57,12 +70,20 @@ class Textbox {
 
   public title: Textbox.TextTemplate | null = null;
   public characterCountStarted = false;
+  private _lastDefaultOptions: Omit<Textbox.TextTemplate, "text"> = {};
   public characterCount = 0;
   public characterCountMax = 0;
   public get finished(): boolean {
     return this.characterCount >= this.characterCountMax;
   }
   private _text: Textbox.TextTemplate[] = [];
+  private _textObject: Textbox.Text[] = [];
+  public getCurrentTextData() {
+    return {
+      text: this._textObject,
+      length: this._text.map(d => d.text).join("").length
+    }
+  }
 
   public animationState = - 100; // 0-100%
 

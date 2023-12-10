@@ -3,31 +3,31 @@ import Active from "./Active";
 
 class Sprite extends Active {
   public image: HTMLImageElement = new Image();
-  public ratio?: VNEngine.Percent;
+  public scale?: VNEngine.Percent;
   public realWidth: number = 0;
   public realHeight: number = 0;
 
   constructor(options?: Sprite.Options) {
     super(options);
     options ??= {};
-    this.setSprite(options.imageSrc ?? "", options.ratio);
+    this.setSprite(options.imageSrc ?? "", options.scale);
   }
 
   /**
    * 
    * @param imageSrc Path to the image
-   * @param ratio The ratio of the image size. 100% is the original size. Default is `VNEngine.percent(100)`.
+   * @param scale The scale of the image size. 100% is the original size. Default is `VNEngine.percent(100)`.
    * @example
    * setSprite("./assets/cheer.png");
    * setSprite("./assets/cheer.png", VNEngine.percent(50)); // Set the image to 50% of the original size.
    */
-  public setSprite(imageSrc: string, ratio?: VNEngine.Percent): Promise<HTMLImageElement> {
+  public setSprite(imageSrc: string, scale?: VNEngine.Percent): Promise<HTMLImageElement> {
     if (!imageSrc) {
       return Promise.resolve(this.image);
     }
     this.image.src = imageSrc;
-    if (ratio) {
-      this.ratio = ratio;
+    if (scale) {
+      this.scale = scale;
     }
 
     return this._loadPromise = new Promise((resolve, reject) => {
@@ -96,9 +96,9 @@ class Sprite extends Active {
       width = this.image.naturalWidth;
       height = this.image.naturalHeight;
     }
-    if (this.ratio) {
-      width = this.ratio.of(width);
-      height = this.ratio.of(height);
+    if (this.scale) {
+      width = this.scale.of(width);
+      height = this.scale.of(height);
     }
 
     this.realWidth = width;
@@ -137,7 +137,7 @@ class Sprite extends Active {
 namespace Sprite {
   export interface Options extends Active.Options {
     imageSrc?: string;
-    ratio?: VNEngine.Percent;
+    scale?: VNEngine.Percent;
   }
 }
 

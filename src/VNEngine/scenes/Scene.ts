@@ -1,5 +1,6 @@
 import VNEngine from "../VNEngine";
 import Active from "../actives/Active";
+import Textbox from "../actives/Textbox";
 import Transition from "../transitions/Transition";
 
 /**
@@ -11,11 +12,27 @@ class Scene {
     return VNEngine.game;
   }
 
-  public beforeTransition?: Scene.EventFunction;
-  public afterTransition?: Scene.EventFunction;
+  private _defaultEvent: Scene.SceneEventFunction = () => {};
+  /**
+   * Events that are triggered at certain points in the scene's lifecycle.
+   * 
+   * These are defined by the user and have no default behavior.
+   */
+  public events = {
+    /**
+     * Triggered when the scene is first started. Use this to initialize the scene's elements.
+     */
+    initialization: this._defaultEvent,
+    beforeTransition: this._defaultEvent,
+    afterTransition: this._defaultEvent,
+    /**
+     * Triggered when the scene is finished. This is triggers after the user clicks after the final dialog is displayed.
+     */
+    onSceneFinished: this._defaultEvent,
+  }
 
-  public setEvent(event: "beforeTransition" | "afterTransition", fn: Scene.EventFunction): void {
-    this[event] = fn;
+  public setEvent<T extends keyof Scene["events"]>(event: T, fn: Scene["events"][T]): void {
+    this.events[event] = fn;
   }
 
   public startedAt: number = 0;
@@ -40,9 +57,11 @@ class Scene {
   public async start(): Promise<void> {
     // Implement Start Transition.
     this.startedAt = window.performance.now();
-    await this.beforeTransition?.();
+    await this.events.initialization?.(this);
+    await this.events.beforeTransition?.(this);
     await this.onEnter();
-    await this.afterTransition?.();
+    await this.events.afterTransition?.(this);
+    this.progressDialog();
   }
 
   public enterTransition?: Transition;
@@ -67,6 +86,7 @@ class Scene {
 
     // Update active elements
     for (const active of this.activeElements) {
+      active.updateAnimationIfRunning(active, delta, time, time - active.animationStartTime);
       active.update(delta, time);
       active.draw(ctx);
       if (this.game.debug) {
@@ -76,10 +96,104 @@ class Scene {
       }
     }
   }
+
+  private dialog: Scene.DialogFunction[] = [];
+  /**
+   * Set the dialog that will be displayed in the textbox. Should be in order of appearance.
+   * @param dialog A list of dialog functions that will be called in order. Easiest way to do so is using `Character.say()`/`Textbox.display`.
+   */
+  public setDialogList(dialog: Scene.DialogFunction[] | ((data: {
+    game: VNEngine;
+    scene: Scene;
+    textbox: Textbox;
+  }) => Scene.DialogFunction[])): void {
+    if (typeof dialog === "function") {
+      const textbox = this.game.getTextbox();
+      if (!textbox) throw new Error("No textbox found. Make sure to call setTextbox() on the game before using setDialogList using a function.");
+      dialog = dialog({
+        game: this.game,
+        scene: this,
+        textbox: textbox,
+      });
+    }
+    this.dialog = [...dialog];
+    this.dialogGen = this.getDialog();
+  }
+
+  private *getDialog() {
+    for (const d of this.dialog) {
+      yield d;
+    }
+  }
+
+  /**
+   * Identical to `Textbox.displayImmediate`.  
+   * Display text in the textbox and start writing it out.
+   * @param text Text or template to generate text from.
+   * @param title Title of the textbox. Usually the name of the character speaking.
+   * @param defaultOptions Default options for all text in `text`.
+   */
+  public displayImmediate: Textbox["displayImmediate"] = (...args) => {
+    this.game.getTextbox()?.displayImmediate(...args);
+  }
+
+  /**
+   * Identical to `Textbox.display`.  
+   * Export a function that will display the text in the textbox and start writing it out.
+   * @param text Text or template to generate text from.
+   * @param title Title of the textbox. Usually the name of the character speaking.
+   * @param defaultOptions Default options for all text in `text`.
+   * @param otherAction A function that is executed right before the text is displayed.
+   * @returns 
+   */
+  public display: Textbox["display"] = (...args) => {
+    return (event: Scene.DialogEvent) => (this.game.getTextbox()!.display(...args)(event));
+  }
+
+  private dialogGen?: ReturnType<Scene["getDialog"]>;
+  private curDialogEvent?: Scene.DialogEvent;
+  
+  /**
+   * Progress the dialog to the next line. This is called automatically when the user clicks the textbox but can also be called manually.  
+   * If the dialog is finished, the `onSceneFinished` event is triggered.  
+   * This function ignores the `dialogProgressionPaused` property of the game.
+   */
+  public progressDialog() {
+    const textbox = this.game.getTextbox();
+
+    if (!textbox) throw new Error("No textbox found. Make sure to call setTextbox() on the game.");
+    if (!this.dialogGen) throw new Error("No dialog found. Make sure to call setDialogList() before progressDialog().");
+    
+    if (textbox.finished) {
+      if (this.curDialogEvent) { // Inform old dialog event that it has proceeded
+        this.curDialogEvent.hasProceeded = true;
+      }
+      
+      this.curDialogEvent = new Scene.DialogEvent(); // Reset dialog event
+      const nextDialog = this.dialogGen.next();
+      if (nextDialog.done) {
+        this.events.onSceneFinished?.(this);
+      }
+      else {
+        nextDialog.value(this.curDialogEvent);
+      }
+    }
+    else {
+      textbox.characterCount = textbox.characterCountMax;
+    }
+  }
 }
 
 namespace Scene {
-  export type EventFunction = () => (void | Promise<void>);
+  export type SceneEventFunction = (scene: Scene) => (void | Promise<void>);
+  export type DialogFunction = (event: DialogEvent) => (void | Promise<void>);
+
+  export class DialogEvent {
+    /**
+     * Whether or not the user has continued beyond this dialog.
+     */
+    public hasProceeded = false;
+  }
 }
 
 export default Scene;

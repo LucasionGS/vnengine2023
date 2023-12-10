@@ -30,13 +30,65 @@ class VNEngine {
 
     // Set static game instance
     VNEngine.game = this;
+    this.listenToEvents();
   }
 
   /**
    * Clears the current game instance.
    */
   public static clear(): void {
+    if (VNEngine.game) {
+      VNEngine.game.unlistenToEvents();
+    }
     VNEngine.game = undefined as any;
+  }
+
+  private dialogProgressionPaused = false;
+  /**
+   * Pauses the dialog progression. This prevents the dialog from progressing when the user clicks on the screen.
+   */
+  public pauseDialogProgression(): void {
+    console.log(window.performance.now(), "pauseDialogProgression");
+    this.dialogProgressionPaused = true;
+  }
+
+  /**
+   * Resumes the dialog progression. This allows the dialog to progress when the user clicks on the screen again.
+   */
+  public resumeDialogProgression(): void {
+    console.log(window.performance.now(), "resumeDialogProgression");
+    this.dialogProgressionPaused = false;
+  }
+
+  /**
+   * Pauses the dialog progression while the function is running. This can be async/awaited
+   * @param fn The function to run.
+   */
+  public async pauseDialogProgressionWhile(fn: () => any|Promise<any>) {
+    this.pauseDialogProgression();
+    await fn();
+    this.resumeDialogProgression();
+  }
+
+  public _events: VNEngine.GameEvent<keyof HTMLElementEventMap>[] = [
+    ["click", () => {
+      const currentScene = VNEngine.game.getCurrentScene();
+      if (!currentScene) return;
+      if (this.dialogProgressionPaused) return;
+      currentScene.progressDialog();
+    }],
+  ];
+
+  private listenToEvents() {
+    this._events.forEach(([event, handler]) => {
+      this.canvas.addEventListener(event, handler);
+    });
+  }
+
+  private unlistenToEvents() {
+    this._events.forEach(([event, handler]) => {
+      this.canvas.removeEventListener(event, handler);
+    });
   }
 
   private currentScene?: Scene;
@@ -49,7 +101,6 @@ class VNEngine {
     }
     this.currentScene = scene;
     scene.start();
-    scene.onEnter();
   }
 
   public start() {
@@ -84,7 +135,7 @@ class VNEngine {
       ctx.textAlign = "start";
       ctx.textBaseline = "alphabetic";
       const lh = 20; // Line height
-      ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
       const height = (lh * 6) + (currentScene?.activeElements.length ?? 0) * (lh * 2);
       ctx.fillRect(0, 0, 300, height);
       ctx.fillStyle = "white";
@@ -115,6 +166,16 @@ class VNEngine {
   public getTextbox(): Textbox | undefined {
     return this.textbox;
   }
+
+  /**
+   * Simple delay function that resolves after `ms` milliseconds.
+   * @param ms 
+   * @returns 
+   */
+  public static delay(ms: number): Promise<void> {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
 }
 
 // Static functions for the VNEngine
@@ -126,7 +187,7 @@ namespace VNEngine {
   }
 
   /**
-   * Used for getting an easy to use percentage value.
+   * Used for getting an easy to use percentage value for certain fields that support it.
    */
   export class Percent {
     public value: number;
@@ -139,6 +200,9 @@ namespace VNEngine {
     }
   }
 
+  /**
+   * Wrapper for creating a percent value.
+   */
   export function percent(value: number): Percent {
     return new Percent(value);
   }
@@ -175,6 +239,8 @@ namespace VNEngine {
   export function builder(root: HTMLElement): VNEngineBuilder {
     return new VNEngineBuilder(root);
   }
+
+  export type GameEvent<T extends keyof HTMLElementEventMap> = [T, (event: HTMLElementEventMap[T]) => void];
 }
 
 export default VNEngine;
