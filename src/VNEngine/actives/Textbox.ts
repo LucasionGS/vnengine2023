@@ -38,7 +38,12 @@ class Textbox {
     this.characterCountStarted = false;
   }
 
-  public continueDialog(text: Textbox.Text | Textbox.Text[]) {
+  /**
+   * Continue writing out the text in the textbox.
+   * It will continue from where it left off, using the same text and title, just appending the new text.
+   * @param text Text or template to generate text from.
+   */
+  public continueDialogImmediate(text: Textbox.Text | Textbox.Text[]) {
     const data = this.getCurrentTextData();
     text = Array.isArray(text) ? text : [text];
     this.displayImmediate([...data.text, ...text], this.title || undefined, this._lastDefaultOptions);
@@ -46,6 +51,15 @@ class Textbox {
     if (!this.characterCountStarted && this.characterCount === data.length) {
       this.incrementCharacterCount();
     }
+  }
+
+  /**
+   * Export a function that will continue writing out the text in the textbox.
+   * It will continue from where it left off, using the same text and title, just appending the new text.
+   * @param text Text or template to generate text from.
+   */
+  public continueDialog(text: Textbox.Text | Textbox.Text[], otherAction?: (event: Scene.DialogEvent) => void) {
+    return (event: Scene.DialogEvent) => { otherAction?.(event); this.continueDialogImmediate(text); }
   }
 
   /**

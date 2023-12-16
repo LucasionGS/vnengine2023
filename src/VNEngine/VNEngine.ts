@@ -70,6 +70,10 @@ class VNEngine {
     this.resumeDialogProgression();
   }
 
+  public canContinueDialog(): boolean {
+    return !this.dialogProgressionPaused && !!this.textbox?.finished;
+  }
+
   public _events: VNEngine.GameEvent<keyof HTMLElementEventMap>[] = [
     ["click", () => {
       const currentScene = VNEngine.game.getCurrentScene();
@@ -138,6 +142,12 @@ class VNEngine {
       ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
       const height = (lh * 6) + (currentScene?.activeElements.length ?? 0) * (lh * 2);
       ctx.fillRect(0, 0, 300, height);
+
+      if (this.canContinueDialog()) {
+        ctx.fillStyle = "green";
+        ctx.fillRect(ctx.canvas.width - 32, ctx.canvas.height - 32, 32, 32);
+      };
+
       ctx.fillStyle = "white";
       ctx.font = `${(lh * 0.75).toFixed(0)}px monospace`;
       ctx.fillText(`FPS: ${Math.round(1000 / delta)}`, lh, lh * 1);

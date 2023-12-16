@@ -90,10 +90,12 @@ class Active {
   public addOnClick(handler: (event: MouseEvent, active: Active) => void): this {
     const listener = (event: MouseEvent) => {
       const { left, top } = VNEngine.game.canvas.getBoundingClientRect();
-      if (event.clientX >= (left + this.absoluteX - this.originXRelative) &&
+      if (
+        event.clientX >= (left + this.absoluteX - this.originXRelative) &&
         event.clientX <= (left + this.absoluteX - this.originXRelative + this.width) &&
         event.clientY >= (top + this.absoluteY - this.originYRelative) &&
-        event.clientY <= (top + this.absoluteY - this.originYRelative + this.height)) {
+        event.clientY <= (top + this.absoluteY - this.originYRelative + this.height)
+      ) {
         handler(event, this);
       }
     };
@@ -158,6 +160,10 @@ class Active {
       ctx.strokeRect(this.absoluteX - this.originXRelative, this.absoluteY - this.originYRelative, this.width, this.height);
     }
     ctx.restore();
+
+    // Draw children
+    this.children.forEach(child => child.draw(ctx));
+    
   }
 
   /**
@@ -264,6 +270,38 @@ class Active {
     }
     if (!_moving) move();
     return p;
+  }
+
+  private children: Active[] = [];
+  public getChildren<T extends Active>(): T[] {
+    return this.children as T[];
+  }
+
+  public addChild<T extends Active>(child: T): T {
+    // Remove old parent
+    const oldParent = child.getParent();
+    if (oldParent) {
+      oldParent.removeChild(child);
+    }
+    
+    child.setParent(this);
+    this.children.push(child);
+    return child;
+  }
+
+  public addChildren<T extends Active>(...children: T[]): T[] {
+    children.forEach(child => this.addChild(child));
+    return children;
+  }
+
+  public removeChild<T extends Active>(child: T): T {
+    this.children = this.children.filter(c => c !== child);
+    return child;
+  }
+
+  public removeChildren<T extends Active>(...children: T[]): T[] {
+    children.forEach(child => this.removeChild(child));
+    return children;
   }
 }
 

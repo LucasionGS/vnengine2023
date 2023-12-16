@@ -31,6 +31,11 @@ class Scene {
     onSceneFinished: this._defaultEvent,
   }
 
+  /**
+   * Set the event handler for a scene event. Overwrites any previous handler.
+   * @param event The event to set the handler for.
+   * @param fn The handler function.
+   */
   public setEvent<T extends keyof Scene["events"]>(event: T, fn: Scene["events"][T]): void {
     this.events[event] = fn;
   }
@@ -42,6 +47,8 @@ class Scene {
     return this._activeElements;
   }
   public addActiveElement(...actives: Active[]): void {
+    const anyHasParent = actives.find(active => active.getParent())
+    if (anyHasParent) throw new Error("Cannot add an active element that already has a parent.");
     this._activeElements.push(...actives);
     this.updateLayerOrder();
     actives.forEach(active => active.start());
@@ -125,27 +132,11 @@ class Scene {
       yield d;
     }
   }
-
-  /**
-   * Identical to `Textbox.displayImmediate`.  
-   * Display text in the textbox and start writing it out.
-   * @param text Text or template to generate text from.
-   * @param title Title of the textbox. Usually the name of the character speaking.
-   * @param defaultOptions Default options for all text in `text`.
-   */
+  
   public displayImmediate: Textbox["displayImmediate"] = (...args) => {
     this.game.getTextbox()?.displayImmediate(...args);
   }
 
-  /**
-   * Identical to `Textbox.display`.  
-   * Export a function that will display the text in the textbox and start writing it out.
-   * @param text Text or template to generate text from.
-   * @param title Title of the textbox. Usually the name of the character speaking.
-   * @param defaultOptions Default options for all text in `text`.
-   * @param otherAction A function that is executed right before the text is displayed.
-   * @returns 
-   */
   public display: Textbox["display"] = (...args) => {
     return (event: Scene.DialogEvent) => (this.game.getTextbox()!.display(...args)(event));
   }

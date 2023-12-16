@@ -23,13 +23,23 @@ class Character extends Sprite {
   }
 
   /**
-   * Display text in the textbox and start writing it out. Automatically sets the title to the name of the character.
+   * Continue writing out the text in the textbox.
+   * It will continue from where it left off, using the same text and title, just appending the new text.
    * @param text Text or template to generate text from.
    */
-  public continueDialog(text: Textbox.Text | Textbox.Text[]) {
+  public continueDialogImmediate(text: Textbox.Text | Textbox.Text[]) {
     const tb = VNEngine.game.getTextbox();
     if (!tb) throw new Error("No textbox found.");
-    tb.continueDialog(text);
+    tb.continueDialogImmediate(text);
+  }
+
+  /**
+   * Export a function that will continue writing out the text in the textbox.
+   * It will continue from where it left off, using the same text and title, just appending the new text.
+   * @param text Text or template to generate text from.
+   */
+  public continueDialog(text: Textbox.Text | Textbox.Text[], otherAction?: ((event: Scene.DialogEvent) => void) | undefined) {
+    return (event: Scene.DialogEvent) => { otherAction?.(event); this.continueDialogImmediate(text); };
   }
 
   /**
@@ -40,6 +50,17 @@ class Character extends Sprite {
    */
   public say(text: Textbox.Text | Textbox.Text[], otherAction?: (event: Scene.DialogEvent) => void) {
     return (event: Scene.DialogEvent) => { otherAction?.(event); this.sayImmediate(text); };
+  }
+
+  /**
+   * Returns the name of the character as a TextTemplate with their color and bolded.
+   */
+  public toText(): Textbox.TextTemplate {
+    return {
+      text: this.name,
+      color: this.color,
+      bold: true,
+    };
   }
 }
 

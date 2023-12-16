@@ -71,7 +71,7 @@ mainScene.setEvent("initialization", () => {
   mainScene.setDialogList(({ game, scene }) => [
     unknown.say("Hello there!"),
 
-    lilium.say(["My name is ", () => lilium.name], async () => {
+    lilium.continueDialog([" My name is ", () => lilium.name], async () => {
       game.pauseDialogProgression();
       await lilium.moveTo({
         y: game.canvas.height + (lilium.realHeight / 4),
@@ -81,15 +81,20 @@ mainScene.setEvent("initialization", () => {
     }),
     
     lilium.say("This is a tiny demo", async () => {
+
       lily.setAnimation(new UpDownAnimation).startAnimation();
       await VNEngine.delay(100);
       await lilium.moveTo({ x: lilium.x + 64, delay: 50 });
-      lilium.continueDialog(", for what this engine can do!");
+
+      lilium.continueDialogImmediate(", for what this engine can do!");
       lily.setAnimation(new ShakingAnimation(4)).startAnimation();
+
       await lilium.moveTo({ x: lilium.x - 128, delay: 50 });
-      lilium.continueDialog(["... ", emp("Including this continuous text.")]);
+      lilium.continueDialogImmediate(["... ", emp("Including this continuous text.")]);
+
       await lilium.moveTo({ x: lilium.x + 64, delay: 50 });
       lilium.setAnimation(new SighAnimation(1)).startAnimation();
+
       game.resumeDialogProgression();
     }),
 
@@ -108,9 +113,10 @@ mainScene.setEvent("initialization", () => {
     scene.display("It can also be nameless. If not providing a name. You can also have multiple lines if the text gets way too long and the words will be automatically wrapped."),
 
     lilium.say([
-      "But I am ", emp(lilium.name, lilium.color),
-      "! You can see that I am bold and have a different color!"
+      "But I am ", lilium.toText(), "!"
     ]),
+
+    lilium.continueDialog(" You can see that I am bold and have a different color!"),
 
     lilium.say([
       "The ", emp("sprite"), " can be changed at anytime."],
